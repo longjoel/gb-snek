@@ -5,7 +5,6 @@
 typedef unsigned char u8;
 typedef unsigned short u16;
 
-
 #define BUFFER_WIDTH 20
 #define BUFFER_HEIGHT 18
 #define BUFFER_SIZE (BUFFER_HEIGHT * BUFFER_WIDTH)
@@ -70,10 +69,12 @@ void seed_round() {
 
   for (u8 y = 0; y < BUFFER_HEIGHT; y++) {
     for (u8 x = 0; x < BUFFER_WIDTH; x++) {
-      snekBodyBuffer[y * BUFFER_WIDTH + x] = 0;
-      snekTileBuffer[y * BUFFER_WIDTH + x] = 0;
+
+      u16 offset = y * BUFFER_WIDTH + x;
+      snekBodyBuffer[offset] = 0;
+      snekTileBuffer[offset] = 0;
       if (x == 0 || y == 0 || x == BUFFER_WIDTH - 1 || y == BUFFER_HEIGHT - 1) {
-        snekTileBuffer[y * BUFFER_WIDTH + x] = 40;
+        snekTileBuffer[offset] = 40;
       }
     }
   }
@@ -102,7 +103,7 @@ void process_round() {
         if (snekBodyBuffer[i] > 0) {
           finalBuffer[i] = TILE_DIAMOND[0];
         }
-        if (snekHead == i ) {
+        if (snekHead == i) {
 
           finalBuffer[i] = TILE_SNEK_HEAD[snekDir];
         }
@@ -140,7 +141,7 @@ u8 process_round_collision() {
     return 0;
   }
 
-  snekBodyBuffer[playerLinearPos] = snekLevel * 3 + 15;
+  snekBodyBuffer[playerLinearPos] = 5;
   snekScore++;
 
   return 1;
