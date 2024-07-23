@@ -44,10 +44,13 @@ u8 finalBuffer[BUFFER_SIZE];    // The tiles that will be coppied to memory
 
 u8 snekX; // position of the snek
 u8 snekY;
-u8 snekDir;   //  the direction the snek is facing
-u8 snekScore; //  the score
-u8 snekLives; //  the lives left
-u8 snekLevel; //  what level we are on
+u8 snekDir;    //  the direction the snek is facing
+u16 snekScore; //  the score
+u8 snekLives;  //  the lives left
+u8 snekLevel;  //  what level we are on
+
+u8 foodX;
+u8 foodY;
 
 /*
 Seed the game
@@ -85,32 +88,47 @@ void process_game() {
     seed_round();
     process_round();
   }
+  snekScore = 0;
+}
+
+void set_food_pos() {
+  u8 hasFoundNewPos = 0;
+  do {
+    foodX = (foodX + snekX + snekY) % BUFFER_WIDTH;
+    foodY = (foodY + snekX + snekY) % BUFFER_HEIGHT;
+    u16 foodIndex = foodY * BUFFER_WIDTH + foodX;
+    if (!snekTileBuffer[foodIndex] && !snekBodyBuffer[foodIndex]) {
+      hasFoundNewPos = 1;
+    }
+  } while (!hasFoundNewPos);
 }
 
 void process_round() {
   // process the round input
+  set_food_pos();
 
   do {
+    delay(75);
+    process_round_input();
 
-    for (u8 inptCounter = 0; inptCounter <= 3; inptCounter++) {
+    u16 snekHead = snekY * BUFFER_WIDTH + snekX;
+    u16 foodLinearPos = foodY * BUFFER_WIDTH + foodX;
 
-      process_round_input();
-
-      // update the buffer
-      u16 snekHead = snekY * BUFFER_WIDTH + snekX;
-      for (u16 i = 0; i < BUFFER_SIZE; i++) {
-        finalBuffer[i] = snekTileBuffer[i];
-        if (snekBodyBuffer[i] > 0) {
-          finalBuffer[i] = TILE_DIAMOND[0];
-        }
-        if (snekHead == i) {
-
-          finalBuffer[i] = TILE_SNEK_HEAD[snekDir];
-        }
+    // update the buffer
+    for (u16 i = 0; i < BUFFER_SIZE; i++) {
+      finalBuffer[i] = snekTileBuffer[i];
+      if (snekBodyBuffer[i] > 0) {
+        finalBuffer[i] = TILE_DIAMOND[0];
       }
+      if (snekHead == i) {
 
-      set_tile_map(0, 0, BUFFER_WIDTH, BUFFER_HEIGHT, finalBuffer);
+        finalBuffer[i] = TILE_SNEK_HEAD[snekDir];
+      }
     }
+
+    finalBuffer[foodLinearPos] = TILE_HEART[0];
+
+    set_tile_map(0, 0, BUFFER_WIDTH, BUFFER_HEIGHT, finalBuffer);
 
     process_round_movement();
 
@@ -121,8 +139,6 @@ void process_round() {
       }
     }
 
-    // delay(100);
-    vsync();
   } while (process_round_collision());
 
   // if we left the loop that means we dead
@@ -133,22 +149,27 @@ void process_round() {
 u8 process_round_collision() {
   // check collision with the level
   u16 playerLinearPos = snekY * BUFFER_WIDTH + snekX;
-
-  if (snekTileBuffer[playerLinearPos]) {
+  u16 foodLinearPos = foodY * BUFFER_WIDTH + foodX;
+  if (snekTileBuffer[playerLinearPos] || snekBodyBuffer[playerLinearPos]) {
+    set_food_pos();
+    for (u16 i = 0; i < BUFFER_SIZE; i++) {
+      snekBodyBuffer[i] = 0;
+    }
+    delay(500);
     return 0;
   }
-  if (snekBodyBuffer[playerLinearPos]) {
-    return 0;
+
+  if (playerLinearPos == foodLinearPos) {
+    snekScore = snekScore + 1;
+    set_food_pos();
   }
 
-  snekBodyBuffer[playerLinearPos] = 5;
-  snekScore++;
+  snekBodyBuffer[playerLinearPos] = 5 + snekScore;
 
   return 1;
 }
 
 void process_round_movement() {
-  snekScore++;
   switch (snekDir) {
   case SNEK_DIR_UP:
     snekY--;
@@ -168,13 +189,16 @@ void process_round_movement() {
 void process_round_input() {
   u8 input = joypad();
 
-  if (input & J_LEFT) {
+  if ((input & J_LEFT)&& snekDir!=SNEK_DIR_RIGHT) {
     snekDir = SNEK_DIR_LEFT;
-  } else if (input & J_RIGHT) {
+  } 
+  if ((input & J_RIGHT)&& snekDir!=SNEK_DIR_LEFT) {
     snekDir = SNEK_DIR_RIGHT;
-  } else if (input & J_UP) {
+  }
+  if ((input & J_UP)&& snekDir!=SNEK_DIR_DOWN ){
     snekDir = SNEK_DIR_UP;
-  } else if (input & J_DOWN) {
+  } 
+  if ((input & J_DOWN)&& snekDir != SNEK_DIR_UP ){
     snekDir = SNEK_DIR_DOWN;
   }
 }
